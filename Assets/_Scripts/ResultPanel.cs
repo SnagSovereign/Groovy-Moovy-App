@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,10 +18,15 @@ public class ResultPanel : MonoBehaviour {
 		imdbID = id;
 	}
 
-
 	public void FillDetails(string title, string year)
 	{
 		titleText.text = title;
 		yearText.text = year;
+	}
+
+	public void ResultPanelClicked()
+	{
+		// Make an API request to get all of the details based on the imdbID
+		App.app.SendAPIRequest(new string[1] { imdbID }, typeof(JMediaDetails));
 	}
 }

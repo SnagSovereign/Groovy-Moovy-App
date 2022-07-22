@@ -1,10 +1,15 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
 public class App : MonoBehaviour {
+
+	// Create a static link to this class so that other
+    // classes can access its public methods & variables
+    public static App app;
 
 	//unity linking variables
 	[SerializeField] TMP_InputField searchInput;
@@ -14,11 +19,14 @@ public class App : MonoBehaviour {
 	// class level variables
 	string search;   //will hold the input from the search input field. 
 	string source;
-	JResults[] jSearch;
+	JResults[] jSearchResults;
+	JMediaDetails jMediaDetails;
 	List<GameObject> resultsPanels = new List<GameObject>();
 
 	void Start () 
 	{
+		app = this;
+
 		// Add an onSubmit event listener to search Input Field
 		searchInput.onSubmit.AddListener( delegate { OnSearchSubmit(); });
 
@@ -26,42 +34,62 @@ public class App : MonoBehaviour {
 		searchInput.Select();
 	}
 
-	void SendAPIRequest()
+	public void SendAPIRequest(string[] requestParameters, Type responseType)
 	{
-		//create an API request
-		source = "https://www.omdbapi.com/?apikey=4d928b0c&s=" + search;
+		// begin the API request
+		source = "https://www.omdbapi.com/?apikey=4d928b0c&";
 
-		StartCoroutine(CheckAPIResponseFinished());
+		// Complete the API request based on the expected response type:
+
+		// if the request is a search expecting results
+		if(responseType == typeof(JResults))
+		{
+			source += "s=" + requestParameters[0];
+		}
+		// if the request uses an imdbID to get details of one piece of media
+		else if(responseType == typeof(JMediaDetails))
+		{
+			source += "i=" + requestParameters[0];
+		}
+		// if an invalid responseType was passed into the method
+		else 
+		{
+			Debug.LogError("Unknown response type: " + responseType);
+		}
+
+		StartCoroutine(CheckAPIResponseFinished(responseType));
 	}
 
-	IEnumerator CheckAPIResponseFinished()
+	IEnumerator CheckAPIResponseFinished(Type responseType)
 	{
 		Debug.Log(source);
+
 		//generate a web request
 		WWW webRequest = new WWW(source);
+
 		//wait for the response (yield method running)
 		yield return webRequest;
 
-		print(webRequest.text);
-
-		Debug.Log("first yield finished");
 		//check that nothing went wrong with data
 		if (webRequest != null && webRequest.isDone)
 		{
-			//deserialise JSON search data
-			jSearch = JSearch.FromJson<JResults>(webRequest.text);
+			// handle the response depending on the type:
 
-			foreach(var result in jSearch)
+			// if the response is search results
+			if(responseType == typeof(JResults))
 			{
-				print("title: " + result.Title + "\n" +
-					  "year: " + result.Year + "\n" +
-					  "imdbID: " + result.imdbID + "\n" +
-					  "type: " + result.Type + "\n" +
-					  "poster: " + result.Poster + "\n");
-			}
+				//deserialise JSON search data
+				jSearchResults = JSearch.FromJson<JResults>(webRequest.text);
 
-			//put the data on the screen with a prefab
-			AddResultsPanel(jSearch);
+				// display the search results on the screen
+				AddResultsPanel(jSearchResults);
+			}
+			else if(responseType == typeof(JMediaDetails))
+			{
+				//deserialise JSON details data
+				jMediaDetails = JMediaDetails.CreateFromJSON(webRequest.text);
+
+			}
 		}
 	}
 
@@ -113,13 +141,13 @@ public class App : MonoBehaviour {
 		}
 	}
 
-
 	public void OnSearchSubmit()
 	{
 		//get the input
 		search = searchInput.text;
 		//clear the old data
 		ClearScreenData();
-		SendAPIRequest();
+		// Send a search API request
+		SendAPIRequest(new string[1] { search }, typeof(JResults));
 	}
 }
