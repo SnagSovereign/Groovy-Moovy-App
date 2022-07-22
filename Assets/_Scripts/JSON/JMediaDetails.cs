@@ -17,6 +17,7 @@ public class JMediaDetails
     public string imdbRating;
     public string imdbID;
     public string Type;
+    public string totalSeasons;
 
     public static JMediaDetails CreateFromJSON(string jString)
     {

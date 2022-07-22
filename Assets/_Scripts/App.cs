@@ -34,7 +34,7 @@ public class App : MonoBehaviour {
 		searchInput.Select();
 	}
 
-	public void SendAPIRequest(string[] requestParameters, Type responseType)
+	public void PrepareAPIRequest(string[] requestParameters, Type responseType)
 	{
 		// begin the API request
 		source = "https://www.omdbapi.com/?apikey=4d928b0c&";
@@ -57,10 +57,10 @@ public class App : MonoBehaviour {
 			Debug.LogError("Unknown response type: " + responseType);
 		}
 
-		StartCoroutine(CheckAPIResponseFinished(responseType));
+		StartCoroutine(SendAPIRequest(responseType));
 	}
 
-	IEnumerator CheckAPIResponseFinished(Type responseType)
+	IEnumerator SendAPIRequest(Type responseType)
 	{
 		Debug.Log(source);
 
@@ -88,7 +88,7 @@ public class App : MonoBehaviour {
 			{
 				//deserialise JSON details data
 				jMediaDetails = JMediaDetails.CreateFromJSON(webRequest.text);
-
+				Debug.Log(webRequest.text);
 			}
 		}
 	}
@@ -110,17 +110,17 @@ public class App : MonoBehaviour {
 			panel.FillDetails(searchResults[i].Title, searchResults[i].Year);
 
 			//call another web request for the image
-			GetBookImage(panel, searchResults[i]);
+			GetPosterImage(panel, searchResults[i]);
 		}
 	}
 
-	void GetBookImage(ResultPanel panel, JResults searchResult)
+	void GetPosterImage(ResultPanel panel, JResults searchResult)
 	{
 		source = searchResult.Poster; 
-		StartCoroutine(JDetailsImageCoroutine(panel));
+		StartCoroutine(FetchImage(panel));
 	}
 
-	IEnumerator JDetailsImageCoroutine(ResultPanel panel)
+	IEnumerator FetchImage(ResultPanel panel)
 	{
 		WWW imageReq = new WWW(source);
 		yield return imageReq;
@@ -148,6 +148,6 @@ public class App : MonoBehaviour {
 		//clear the old data
 		ClearScreenData();
 		// Send a search API request
-		SendAPIRequest(new string[1] { search }, typeof(JResults));
+		PrepareAPIRequest(new string[1] { search }, typeof(JResults));
 	}
 }
