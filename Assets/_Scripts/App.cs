@@ -11,12 +11,31 @@ public class App : MonoBehaviour {
     // classes can access its public methods & variables
     public static App app;
 
+	[SerializeField] Texture2D placeholderPoster;
+
 	//unity linking variables
+	[Header("Search Screen Objects")]
 	[SerializeField] TMP_InputField searchInput;
-	[SerializeField] GameObject scrollContent;
+	[SerializeField] GameObject searchScrollContent;
 	[SerializeField] GameObject resultPanel;
 
+	[Header("Media Details Objects")]
+	[SerializeField] RawImage mediaDetailsPoster;
+	[SerializeField] TextMeshProUGUI topBarTitleText;
+	[SerializeField] TextMeshProUGUI mediaDetailsTitleText;
+	[SerializeField] TextMeshProUGUI yearRatingRuntimeText;
+	[SerializeField] GameObject genreLayoutGroup;
+	[SerializeField] GameObject genreButton;
+	[SerializeField] TextMeshProUGUI mediaDetailsPlotText;
+	[SerializeField] SeasonsButton seasonsButton;
+	[SerializeField] TextMeshProUGUI imdbRatingText;
+	[SerializeField] TextMeshProUGUI creditsText;
+
+	[Header("Screens")]
+	[SerializeField] GameObject[] screens;
+
 	// class level variables
+	int currentScreenIndex = -1;
 	string search;   //will hold the input from the search input field. 
 	string source;
 	JResults[] jSearchResults;
@@ -27,11 +46,21 @@ public class App : MonoBehaviour {
 	{
 		app = this;
 
+		MenuGoTo(0);
+
 		// Add an onSubmit event listener to search Input Field
 		searchInput.onSubmit.AddListener( delegate { OnSearchSubmit(); });
 
 		//put the cursor on the input field ready to type
 		searchInput.Select();
+
+		string genreString = "Crime, Drama, Thriller";
+		string[] genres = genreString.Split(new[] { ", " }, StringSplitOptions.None);
+		foreach (string genre in genres)
+		{
+			print(genre);
+		}
+
 	}
 
 	public void PrepareAPIRequest(string[] requestParameters, Type responseType)
@@ -81,13 +110,16 @@ public class App : MonoBehaviour {
 				//deserialise JSON search data
 				jSearchResults = JSearch.FromJson<JResults>(webRequest.text);
 
-				// display the search results on the screen
+				// display the search results on the search screen
 				AddResultsPanel(jSearchResults);
 			}
 			else if(responseType == typeof(JMediaDetails))
 			{
 				//deserialise JSON details data
 				jMediaDetails = JMediaDetails.CreateFromJSON(webRequest.text);
+
+				// display the media details on the media details screen
+				DisplayMediaDetails(jMediaDetails);
 				Debug.Log(webRequest.text);
 			}
 		}
@@ -99,7 +131,7 @@ public class App : MonoBehaviour {
 		for (int i = 0; i < searchResults.Length; i++)
 		{
 			//instantiate a new results prefab
-			GameObject newRow = Instantiate(resultPanel, scrollContent.transform);
+			GameObject newRow = Instantiate(resultPanel, searchScrollContent.transform);
 
 			//add the panel to the tracking list
 			resultsPanels.Add(newRow);
@@ -110,17 +142,49 @@ public class App : MonoBehaviour {
 			panel.FillDetails(searchResults[i].Title, searchResults[i].Year);
 
 			//call another web request for the image
-			GetPosterImage(panel, searchResults[i]);
+			GetPosterImage(panel.posterImage, searchResults[i].Poster);
 		}
 	}
 
-	void GetPosterImage(ResultPanel panel, JResults searchResult)
+	void DisplayMediaDetails(JMediaDetails mediaDetails)
 	{
-		source = searchResult.Poster; 
-		StartCoroutine(FetchImage(panel));
+		topBarTitleText.text = mediaDetailsTitleText.text = mediaDetails.Title;
+		yearRatingRuntimeText.text = mediaDetails.Year + "   " + 
+									 mediaDetails.Rated + "   " + 
+									 mediaDetails.Runtime;
+		mediaDetailsPlotText.text = mediaDetails.Plot;
+		imdbRatingText.text = mediaDetails.imdbRating + " / 10";
+		
+		creditsText.text = "Actors:<color=#AEAEAEFF> " + mediaDetails.Actors + "<color=#FFFFFFFF>\n"
+						 + "Directors:<color=#AEAEAEFF> " + mediaDetails.Director + "<color=#FFFFFFFF>\n"
+						 + "Writers:<color=#AEAEAEFF> " + mediaDetails.Writer;
+
+		string[] genres = mediaDetails.Genre.Split(new[] { ", " }, StringSplitOptions.None);
+
+		if(mediaDetails.Type == "series")
+		{
+			seasonsButton.gameObject.SetActive(true);
+			seasonsButton.seasonsText.text = mediaDetails.totalSeasons + " Seasons";
+		}
+
+		foreach(string genre in genres)
+		{
+			//instantiate a new genre button
+			GameObject newGenre = Instantiate(genreButton, genreLayoutGroup.transform);
+			newGenre.GetComponent<GenreButton>().genreText.text = genre;
+		}
+
+		GetPosterImage(mediaDetailsPoster, mediaDetails.Poster);
+
 	}
 
-	IEnumerator FetchImage(ResultPanel panel)
+	void GetPosterImage(RawImage image, string imageURL)
+	{
+		source = imageURL; 
+		StartCoroutine(FetchImage(image));
+	}
+
+	IEnumerator FetchImage(RawImage image)
 	{
 		WWW imageReq = new WWW(source);
 		yield return imageReq;
@@ -128,11 +192,11 @@ public class App : MonoBehaviour {
 		//check it worked and place the image
 		if (imageReq != null && imageReq.isDone && imageReq.error == null)
 		{
-			panel.posterImage.texture = imageReq.texture;
+			image.texture = imageReq.texture;
 		}
 	}
 
-	void ClearScreenData()
+	void ClearSearchScreen()
 	{
 		foreach (GameObject panel in resultsPanels)
 		{
@@ -141,12 +205,55 @@ public class App : MonoBehaviour {
 		}
 	}
 
+	public void ClearMediaDetailsScreen()
+	{
+		topBarTitleText.text = "";
+		mediaDetailsTitleText.text = "";
+		yearRatingRuntimeText.text = "";
+		mediaDetailsPlotText.text = "";
+		imdbRatingText.text = "";
+		mediaDetailsPoster.texture = null;
+		creditsText.text = "";
+		mediaDetailsPoster.texture = placeholderPoster;
+		seasonsButton.seasonsText.text = "";
+		seasonsButton.gameObject.SetActive(false);
+
+		// destory all of the genres
+		 foreach (Transform genreButton in genreLayoutGroup.transform) 
+		 {
+     		GameObject.Destroy(genreButton.gameObject);
+		 }
+	}
+
+	public void MenuGoTo(int screenIndex)
+	{
+		// changes the UI canvas
+		// The corresponding index for each screen are as follows:
+        // 		0 = Search
+        // 		1 = Media Details
+
+		// Exit this method if the currentScreenIndex is already the screenIndex to switch to
+        if (currentScreenIndex == screenIndex) return;
+
+		// Disable all of the screens
+        foreach (GameObject screen in screens)
+        {
+            screen.SetActive(false);
+        }
+
+		// Enable the new screen that is being switched to
+        screens[screenIndex].SetActive(true);
+
+		// Update the currentScreenIndex to the new one
+        currentScreenIndex = screenIndex;
+	}
+
 	public void OnSearchSubmit()
 	{
 		//get the input
 		search = searchInput.text;
 		//clear the old data
-		ClearScreenData();
+		ClearSearchScreen();
 		// Send a search API request
 		PrepareAPIRequest(new string[1] { search }, typeof(JResults));
 	}

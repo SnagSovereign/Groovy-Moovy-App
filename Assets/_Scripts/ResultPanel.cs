@@ -28,5 +28,6 @@ public class ResultPanel : MonoBehaviour {
 	{
 		// Make an API request to get all of the details based on the imdbID
 		App.app.PrepareAPIRequest(new string[1] { imdbID }, typeof(JMediaDetails));
+		App.app.MenuGoTo(1);
 	}
 }

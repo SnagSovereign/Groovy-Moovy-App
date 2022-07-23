@@ -10,6 +10,7 @@ public class JMediaDetails
     public string Released;
     public string Runtime;
     public string Genre;
+    public string Director;
     public string Writer;
     public string Actors;
     public string Plot;
