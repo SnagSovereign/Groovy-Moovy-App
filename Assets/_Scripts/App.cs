@@ -53,14 +53,6 @@ public class App : MonoBehaviour {
 
 		//put the cursor on the input field ready to type
 		searchInput.Select();
-
-		string genreString = "Crime, Drama, Thriller";
-		string[] genres = genreString.Split(new[] { ", " }, StringSplitOptions.None);
-		foreach (string genre in genres)
-		{
-			print(genre);
-		}
-
 	}
 
 	public void PrepareAPIRequest(string[] requestParameters, Type responseType)

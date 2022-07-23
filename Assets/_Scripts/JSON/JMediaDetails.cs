@@ -7,7 +7,6 @@ public class JMediaDetails
     public string Title;
     public string Year;
     public string Rated;
-    public string Released;
     public string Runtime;
     public string Genre;
     public string Director;
