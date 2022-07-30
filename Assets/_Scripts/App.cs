@@ -121,7 +121,9 @@ public class App : MonoBehaviour {
 			if(responseType == typeof(JResults))
 			{
 				//deserialise JSON search data
-				jSearchResults = ParseJson.ResultsFromJson<JResults>(webRequest.text);
+				// jSearchResults = ParseJson.ResultsFromJson<JResults>(webRequest.text);
+				jSearchResults = ParseJson.FromJson<JResults>(webRequest.text);
+
 
 				// display the search results on the search screen
 				GenerateResultsList(jSearchResults);
@@ -137,7 +139,7 @@ public class App : MonoBehaviour {
 			}
 			else if (responseType == typeof(JEpisode))
 			{
-				jEpisodes = ParseJson.EpisodesFromJson<JEpisode>(webRequest.text);
+				jEpisodes = ParseJson.FromJson<JEpisode>(webRequest.text);
 				GenerateEpisodeList(jEpisodes);
 			}
 		}
