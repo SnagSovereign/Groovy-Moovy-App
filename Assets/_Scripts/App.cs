@@ -31,7 +31,19 @@ public class App : MonoBehaviour {
 	[SerializeField] TextMeshProUGUI imdbRatingText;
 	[SerializeField] TextMeshProUGUI creditsText;
 
-	[Header("Screens")]
+	[Header("Seasons Screen Objects")]
+	[SerializeField] GameObject seasonsScrollContent;
+	[SerializeField] GameObject seasonPanel;
+
+	[Header("Episodes Screen Objects")]
+	[SerializeField] GameObject episodesScrollContent;
+	public TextMeshProUGUI seasonText;
+	[SerializeField] GameObject episodePanel;
+
+
+
+	[Header("Canvases")]
+	[SerializeField] GameObject topBar;
 	[SerializeField] GameObject[] screens;
 
 	// class level variables
@@ -39,8 +51,13 @@ public class App : MonoBehaviour {
 	string search;   //will hold the input from the search input field. 
 	string source;
 	JResults[] jSearchResults;
-	JMediaDetails jMediaDetails;
+	[HideInInspector] public JMediaDetails jMediaDetails;
+	JEpisode[] jEpisodes;
+
 	List<GameObject> resultsPanels = new List<GameObject>();
+	List<GameObject> seasonPanels = new List<GameObject>();
+	List<GameObject> episodePanels = new List<GameObject>();
+
 
 	void Start () 
 	{
@@ -72,6 +89,10 @@ public class App : MonoBehaviour {
 		{
 			source += "i=" + requestParameters[0];
 		}
+		else if(responseType == typeof(JEpisode))
+		{
+			source += "i=" + requestParameters[0] + "&" + "season=" + requestParameters[1];
+		}
 		// if an invalid responseType was passed into the method
 		else 
 		{
@@ -100,11 +121,12 @@ public class App : MonoBehaviour {
 			if(responseType == typeof(JResults))
 			{
 				//deserialise JSON search data
-				jSearchResults = JSearch.FromJson<JResults>(webRequest.text);
+				jSearchResults = ParseJson.ResultsFromJson<JResults>(webRequest.text);
 
 				// display the search results on the search screen
-				AddResultsPanel(jSearchResults);
+				GenerateResultsList(jSearchResults);
 			}
+			// if the response is media details
 			else if(responseType == typeof(JMediaDetails))
 			{
 				//deserialise JSON details data
@@ -112,12 +134,16 @@ public class App : MonoBehaviour {
 
 				// display the media details on the media details screen
 				DisplayMediaDetails(jMediaDetails);
-				Debug.Log(webRequest.text);
+			}
+			else if (responseType == typeof(JEpisode))
+			{
+				jEpisodes = ParseJson.EpisodesFromJson<JEpisode>(webRequest.text);
+				GenerateEpisodeList(jEpisodes);
 			}
 		}
 	}
 
-	void AddResultsPanel(JResults[] searchResults)
+	void GenerateResultsList(JResults[] searchResults)
 	{
 		//loop through the array creating a panel for each object
 		for (int i = 0; i < searchResults.Length; i++)
@@ -167,7 +193,33 @@ public class App : MonoBehaviour {
 		}
 
 		GetPosterImage(mediaDetailsPoster, mediaDetails.Poster);
+	}
 
+	public void GenerateSeasonList()
+	{
+		for (int season = 1; season <= int.Parse(jMediaDetails.totalSeasons); season++)
+		{
+			// Instantiate season panels
+			GameObject newRow = Instantiate(seasonPanel, seasonsScrollContent.transform);
+			seasonPanels.Add(newRow);
+
+			SeasonPanel panel = newRow.GetComponent<SeasonPanel>();
+			panel.SetSeason(season);
+		}
+
+	}
+
+	public void GenerateEpisodeList(JEpisode[] episodes)
+	{
+		foreach(JEpisode episode in episodes)
+		{
+			// Instantiate episode panels
+			GameObject newRow = Instantiate(episodePanel, episodesScrollContent.transform);
+			episodePanels.Add(newRow);
+
+			EpisodePanel panel = newRow.GetComponent<EpisodePanel>();
+			panel.SetEpisode(episode.Episode, episode.Title);
+		}
 	}
 
 	void GetPosterImage(RawImage image, string imageURL)
@@ -217,6 +269,25 @@ public class App : MonoBehaviour {
 		 }
 	}
 
+	void ClearSeasonsScreen()
+	{
+		foreach (GameObject panel in seasonPanels)
+		{
+			//destroy object
+			DestroyObject(panel);
+		}
+	}
+
+	void ClearEpisodesScreen()
+	{
+		seasonText.text = "";
+		foreach (GameObject panel in episodePanels)
+		{
+			//destroy object
+			DestroyObject(panel);
+		}
+	}
+
 	public void MenuGoTo(int screenIndex)
 	{
 		// changes the UI canvas
@@ -233,11 +304,40 @@ public class App : MonoBehaviour {
             screen.SetActive(false);
         }
 
+		// Disable the top bar if the new screenIndex is 0 (search screen)
+		// Enable the top bar for any other screen
+		topBar.SetActive(screenIndex == 0 ? false : true);
+
 		// Enable the new screen that is being switched to
         screens[screenIndex].SetActive(true);
 
 		// Update the currentScreenIndex to the new one
         currentScreenIndex = screenIndex;
+	}
+
+	public void BackButtonClicked()
+	{
+		switch (currentScreenIndex - 1)
+		{
+			// going back to search
+			case 0: 
+				ClearMediaDetailsScreen();
+				break;
+			// going back to media details screen
+			case 1:
+				ClearSeasonsScreen();
+				break;
+			// going back to seasons screen
+			case 2:
+				ClearEpisodesScreen();
+				break;
+			default:
+				Debug.LogWarning("Cannot go back to that screen");
+				break;
+
+		}
+
+		MenuGoTo(currentScreenIndex - 1);
 	}
 
 	public void OnSearchSubmit()
