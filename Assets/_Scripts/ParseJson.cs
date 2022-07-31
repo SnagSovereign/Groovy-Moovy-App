@@ -7,7 +7,7 @@ public static class ParseJson {
         //create each array object from the string supplied
         Wrapper<T> wrapper = JsonUtility.FromJson<Wrapper<T>>(json);
         //return the array of objects
-        if(typeof(T) == typeof(JResults)) { return wrapper.Search; }
+        if(typeof(T) == typeof(JResult)) { return wrapper.Search; }
         else if(typeof(T) == typeof(JEpisode)) { return wrapper.Episodes; }
         else { return null; }
     }

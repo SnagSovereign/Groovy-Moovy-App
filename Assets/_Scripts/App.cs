@@ -40,8 +40,6 @@ public class App : MonoBehaviour {
 	public TextMeshProUGUI seasonText;
 	[SerializeField] GameObject episodePanel;
 
-
-
 	[Header("Canvases")]
 	[SerializeField] GameObject topBar;
 	[SerializeField] GameObject[] screens;
@@ -50,14 +48,13 @@ public class App : MonoBehaviour {
 	int currentScreenIndex = -1;
 	string search;   //will hold the input from the search input field. 
 	string source;
-	JResults[] jSearchResults;
+	JResult[] jSearchResults;
 	[HideInInspector] public JMediaDetails jMediaDetails;
 	JEpisode[] jEpisodes;
 
 	List<GameObject> resultsPanels = new List<GameObject>();
 	List<GameObject> seasonPanels = new List<GameObject>();
 	List<GameObject> episodePanels = new List<GameObject>();
-
 
 	void Start () 
 	{
@@ -72,7 +69,7 @@ public class App : MonoBehaviour {
 		searchInput.Select();
 	}
 
-	public void PrepareAPIRequest(string[] requestParameters, Type responseType)
+	public void PrepareAPIRequest(string[] requestParams, Type responseType)
 	{
 		// begin the API request
 		source = "https://www.omdbapi.com/?apikey=4d928b0c&";
@@ -80,18 +77,18 @@ public class App : MonoBehaviour {
 		// Complete the API request based on the expected response type:
 
 		// if the request is a search expecting results
-		if(responseType == typeof(JResults))
+		if(responseType == typeof(JResult))
 		{
-			source += "s=" + requestParameters[0];
+			source += "s=" + requestParams[0];
 		}
 		// if the request uses an imdbID to get details of one piece of media
 		else if(responseType == typeof(JMediaDetails))
 		{
-			source += "i=" + requestParameters[0];
+			source += "i=" + requestParams[0];
 		}
 		else if(responseType == typeof(JEpisode))
 		{
-			source += "i=" + requestParameters[0] + "&" + "season=" + requestParameters[1];
+			source += "i=" + requestParams[0] + "&" + "season=" + requestParams[1];
 		}
 		// if an invalid responseType was passed into the method
 		else 
@@ -118,13 +115,11 @@ public class App : MonoBehaviour {
 			// handle the response depending on the type:
 
 			// if the response is search results
-			if(responseType == typeof(JResults))
+			if(responseType == typeof(JResult))
 			{
 				//deserialise JSON search data
-				// jSearchResults = ParseJson.ResultsFromJson<JResults>(webRequest.text);
-				jSearchResults = ParseJson.FromJson<JResults>(webRequest.text);
-
-
+				// jSearchResults = ParseJson.ResultsFromJson<JResult>(webRequest.text);
+				jSearchResults = ParseJson.FromJson<JResult>(webRequest.text);
 				// display the search results on the search screen
 				GenerateResultsList(jSearchResults);
 			}
@@ -132,20 +127,21 @@ public class App : MonoBehaviour {
 			else if(responseType == typeof(JMediaDetails))
 			{
 				//deserialise JSON details data
-				jMediaDetails = JMediaDetails.CreateFromJSON(webRequest.text);
-
+				jMediaDetails = JsonUtility.FromJson<JMediaDetails>(webRequest.text);
 				// display the media details on the media details screen
 				DisplayMediaDetails(jMediaDetails);
 			}
 			else if (responseType == typeof(JEpisode))
 			{
+				//deserialise JSON episodes data
 				jEpisodes = ParseJson.FromJson<JEpisode>(webRequest.text);
+				// display the episodes in a list
 				GenerateEpisodeList(jEpisodes);
 			}
 		}
 	}
 
-	void GenerateResultsList(JResults[] searchResults)
+	void GenerateResultsList(JResult[] searchResults)
 	{
 		//loop through the array creating a panel for each object
 		for (int i = 0; i < searchResults.Length; i++)
@@ -204,11 +200,9 @@ public class App : MonoBehaviour {
 			// Instantiate season panels
 			GameObject newRow = Instantiate(seasonPanel, seasonsScrollContent.transform);
 			seasonPanels.Add(newRow);
-
-			SeasonPanel panel = newRow.GetComponent<SeasonPanel>();
-			panel.SetSeason(season);
+			// set the season number on the panel
+			newRow.GetComponent<SeasonPanel>().SetSeason(season);
 		}
-
 	}
 
 	public void GenerateEpisodeList(JEpisode[] episodes)
@@ -218,9 +212,8 @@ public class App : MonoBehaviour {
 			// Instantiate episode panels
 			GameObject newRow = Instantiate(episodePanel, episodesScrollContent.transform);
 			episodePanels.Add(newRow);
-
-			EpisodePanel panel = newRow.GetComponent<EpisodePanel>();
-			panel.SetEpisode(episode.Episode, episode.Title);
+			// Set the episode number and title on the panel
+			newRow.GetComponent<EpisodePanel>().SetEpisode(episode.Episode, episode.Title);
 		}
 	}
 
@@ -336,9 +329,7 @@ public class App : MonoBehaviour {
 			default:
 				Debug.LogWarning("Cannot go back to that screen");
 				break;
-
 		}
-
 		MenuGoTo(currentScreenIndex - 1);
 	}
 
@@ -349,6 +340,6 @@ public class App : MonoBehaviour {
 		//clear the old data
 		ClearSearchScreen();
 		// Send a search API request
-		PrepareAPIRequest(new string[1] { search }, typeof(JResults));
+		PrepareAPIRequest(new string[1] { search }, typeof(JResult));
 	}
 }

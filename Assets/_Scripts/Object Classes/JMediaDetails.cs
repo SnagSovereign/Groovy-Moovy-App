@@ -18,12 +18,4 @@ public class JMediaDetails
     public string imdbID;
     public string Type;
     public string totalSeasons;
-
-    public static JMediaDetails CreateFromJSON(string jString)
-    {
-        //create a return a Jdetails object using jsonUtility
-        return JsonUtility.FromJson<JMediaDetails>(jString);
-    }
-
 }
-
